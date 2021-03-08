@@ -97,7 +97,7 @@ saveInt(4*intaccuracy + 1) = 0.25;
 %     - partial-resposne frequency pulse
 %       - window function
 
-% Graph the Frequency and Phase Pulses
+%% Graph the Frequency and Phase Pulses
 % Refer to figure 2.1 in [1] 
 figure('Name','Frequency and Phase Pulse', 'Position', [100 100 1000 500]);
 plotter(fTGs, 0, 8, 0.01);
@@ -116,7 +116,7 @@ legend('fTG(t), frequency pulse', 'qTG(t), phase pulse', ...
        'Location','northwest');
 title('Frequency pulse and phase pulse for SOQPSK-TG');
 
-% Graph the Phase Function
+%% Graph the Phase Function
 figure('Name','Phase Function', 'Position', [100 100 1000 500]);
 xw = 0:0.1:length(alpha);
 yw = zeros(length(xw),1);
@@ -133,7 +133,7 @@ grid on
 title('Phase function');
 legend('phi(t;alpha)','Location','northwest');
 
-% Graph the Binary, Ternary, and SOQPSK-TG representaions 
+%% Graph the Binary, Ternary, and SOQPSK-TG representaions 
 % of the original bitstream
 figure('Name','Wave Representations','Position', [100 100 1000 500]);
 xw = 0:0.1:length(alpha)*1.1;
@@ -156,7 +156,52 @@ yticks([-1 -0.5 0 0.5 1 1.5 2.5 3.5 4 5]);
 yticklabels({'-1','0.5','0','0.5','1','-1','0','1','0','1'})
 legend('SOQPSK-TG Wave', 'Ternary Data', 'Binary Data', 'Location', 'southoutside');
 
-% Window Function
+
+%% graph real RF
+
+sps = 20;  % samples per symbol
+xw = 0:1/sps:length(alpha)*1.1;  % samples
+yw = zeros(length(xw),1);  % complex baseband signal
+for i = 1:length(xw)
+    yw(i) = s(xw(i),alpha);
+end
+I = real(yw);
+Q = imag(yw);
+
+Fs = sps;
+Fc = 2.4e3;  % carrier signal frequency
+t = (0:1/Fs:length(alpha)*1.1)'./Fc;
+Iup = I.*cos(Fc*2*pi*t);  % multiply I by carrier signal
+Qup = -Q.*sin(Fc*2*pi*t);  % multiply Q by carrier offset 90deg
+S = Iup + Qup;  % real RF signal
+
+% plot I and upsampled I
+figure('Name', 'I and Iup')
+plot(xw, I)
+hold on
+plot(t.*Fc, Iup)
+hold off
+title('I and Iup')
+xlabel('t/Tc (sec)')
+legend('I','Iup','Location','southoutside')
+
+%plot Q and upsampled Q
+figure('Name', 'Q and Qup')
+plot(xw, Q)
+hold on
+plot(t.*Fc, Qup)
+hold off
+title('Q and Qup')
+xlabel('t/Tc (sec)')
+legend('Q','Qup','Location','southoutside')
+
+%plot Iup + Qup
+figure('Name', 'Real RF Wave')
+plot(t, S)
+title('Real RF Wave')
+xlabel('t (sec)')
+
+%% Window Function
 function window = w(t)
     global T1; global T2; global T;
     check = abs(t/(2*T));
@@ -169,7 +214,7 @@ function window = w(t)
     end
 end
 
-% Phase pulse function
+%% Phase pulse function
 function phase = q(t)
     global L; global T; %global fTGs;
     if t <= 0
@@ -193,7 +238,7 @@ function phase = q(t)
     %end
 end
 
-% Trapezoid rule integration
+%% Trapezoid rule integration
 % MATLAB's Integral function bugs when integrating fTG
 % Old integral function was giving issues at
 % x > 3 and x < -3 in non-shifted frequency graph,
@@ -211,7 +256,7 @@ function int = trapezoids(f,a,b,n)
     int = (h.*(fa + f(b))./2) + h.*int;
 end
 
-% Fast trapezoids
+%% Fast trapezoids
 % Trapezoid rule implemented above is incredibly slow and inefficient
 % This function takes advantage of precomputed values for fTGs
 % and uses the inbuilt trapz() function
@@ -224,7 +269,7 @@ function int = fasttrapezoids(b)
     int = trapz(xfTGs(1:offset), savedfTGs(1:offset), 1);
 end
 
-% Fast Integral
+%% Fast Integral
 % If fTGs values can be precomputed, why not precomute the integral?
 % 80000 points were taken over a range of 0-8, the only range that
 % matters thanks to the window function (fGTs is zero everywhere else)
@@ -237,7 +282,7 @@ function int = fastintegral(b)
     int = saveInt(offset);
 end
 
-% phi(t;alpha)
+%% phi(t;alpha)
 function phase = phi(t, alpha)
     % [1]'s implementation - k was never explained as a variable
     %{
@@ -274,13 +319,13 @@ function phase = phi(t, alpha)
     
 end
 
-% SOQPSK-TG signal baseband representation
+%% SOQPSK-TG signal baseband representation
 function signal = s(t, alpha)
     global E; global T;
     signal = sqrt(E/T) * exp(1i*phi(t, alpha));
 end
 
-% Helps when plotting functions
+%% Helps when plotting functions
 function plotter(func, lower, upper, step)
     xw = lower:step:upper;
     yw = zeros(length(xw),1);
