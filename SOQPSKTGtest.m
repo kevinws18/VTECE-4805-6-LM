@@ -27,13 +27,13 @@ E = 1;
 % Random bitstream generation
 number_of_bits = 100;
 u = randi([0 1],[1,number_of_bits]);
+%u = zeros(1,100);
+%u(1) = 1;
+%u(2) = 1;
 
 % Convert bitstream to a ternary sequence 
 % using the standard precorder (Equ 2.8)
-alpha = zeros(1,number_of_bits);
-for k = 3:number_of_bits
-	alpha(k) = ((-1)^(k+1))*(2*u(k-1) - 1)*(u(k) - u(k-2));
-end
+alpha = standard_precorder(u);
 
 % Implement the window function
 % unique to the TG vairant of SOQPSK (Equ 2.5)
@@ -100,7 +100,7 @@ saveInt(4*intaccuracy + 1) = 0.25;
 %% Graph the Frequency and Phase Pulses
 % Refer to figure 2.1 in [1] 
 figure('Name','Frequency and Phase Pulse', 'Position', [100 100 1000 500]);
-plotter(fTGs, 0, 8, 0.01);
+plotter(fTGs, 0, 8, 0.1);
 hold on
 xw = 0:0.01:8;
 yw = zeros(length(xw),1);
@@ -154,13 +154,72 @@ xticks(floor(linspace(0,length(alpha)*1.1,13)));
 ylim([-1.25,5.25])
 yticks([-1 -0.5 0 0.5 1 1.5 2.5 3.5 4 5]);
 yticklabels({'-1','0.5','0','0.5','1','-1','0','1','0','1'})
-legend('SOQPSK-TG Wave', 'Ternary Data', 'Binary Data', 'Location', 'southoutside');
+legend('Real Part of Output Wave', 'Ternary Data', 'Binary Data', 'Location', 'southoutside');
 
+% Implement true OQPSK functionality by splittng output wave
+% into real and imaginary (I and Q) components, time shifting
+% the Q wave by half the period, and summing the reuslt.
+figure('Name','Wave Representations','Position', [100 100 1000 500]);
+plot(xw,real(yw) + 5)
+hold on
+plot(xw + T/2,imag(yw) + 2.5)
+size = length(yw);
+spacing = xw(2) - xw(1);
+yw_offset = (T/2)/spacing;
+wave = zeros(1,length(yw) - yw_offset);
+for i = 1:length(yw) + yw_offset
+    if not(or(i > size, i - yw_offset < 1))
+        wave(i) = real(yw(i)) + imag(yw(i - yw_offset));
+    end
+end
+plot(xw(yw_offset+1:length(wave)),wave(yw_offset+1:length(wave))./2)
+legend('Real Part', 'Imaginary Part', 'SOQPSK-TG Wave', 'Location', 'southoutside');
+grid on 
+title('Real and Imaginary Parts of signal wave');
+xlim([0,length(alpha)*1.1]);
+xticks(floor(linspace(0,length(alpha)*1.2,13)));
+ylim([-1.25,6.25])
+yticks([-1 -0.5 0 0.5 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6]);
+yticklabels({'-1','0.5','0','0.5','1','-1','0.5','0','0.5','1','-1','0.5','0','0.5','1'})
+
+%% Non-functional implementation of the Eye Diagram
+%          00           01           10            11
+eye = {zeros(1,50), zeros(1,50), zeros(1,50), zeros(1,50)};
+eye{2}(2) = 1; eye{3}(1) = 1; eye{4}(1) = 1; eye{4}(2) = 1;
+figure('Name','Eye Diagram','Position', [100 100 1000 500]);
+hold on
+for i=1:4
+   [xValues, signal] = SOQPSKTGMod(eye{i});
+   plot(xValues, signal);
+end
+
+
+%figure('Name','One Function','Position', [100 100 1000 500]);
+%[xValues, signal] = SOQPSKTGMod(u);
+%plot(xValues, signal);
+
+% Additional functions provided by Dr.Beex, uncomment to check them out
+
+%{
+figure('Name','Wave Representations','Position', [100 100 1000 500]);
+plot(xw, abs(real(yw) + 1i*imag(yw)));
+
+figure('Name','Wave Representations','Position', [100 100 1000 500]);
+plot(real(yw), imag(yw));
+
+freqz(abs(real(yw) + 1i*imag(yw)),1,2.^18,'whole',1)
+
+[BB, ff] = freqz(yw,1,2.^18,'whole',1);
+plot(fftshift(db(BB)))
+
+[BB, ff] = freqz(kaiser(length(yw), 10).*yw,1,2.^18,'whole',1);
+plot(fftshift(db(BB)))
+%}
 
 %% graph real RF
 
 sps = 20;  % samples per symbol
-xw = 0:1/sps:length(alpha)*1.1;  % samples
+xw = 0:1/sps:length(alpha)*1.1;  % symbols
 yw = zeros(length(xw),1);  % complex baseband signal
 for i = 1:length(xw)
     yw(i) = s(xw(i),alpha);
@@ -168,9 +227,8 @@ end
 I = real(yw);
 Q = imag(yw);
 
-Fs = sps;
-Fc = 2.4e3;  % carrier signal frequency
-t = (0:1/Fs:length(alpha)*1.1)'./Fc;
+Fc = 2.4;  % carrier signal frequency
+t = (0:1/sps:length(alpha)*1.1)'./Fc;
 Iup = I.*cos(Fc*2*pi*t);  % multiply I by carrier signal
 Qup = -Q.*sin(Fc*2*pi*t);  % multiply Q by carrier offset 90deg
 S = Iup + Qup;  % real RF signal
@@ -182,7 +240,7 @@ hold on
 plot(t.*Fc, Iup)
 hold off
 title('I and Iup')
-xlabel('t/Tc (sec)')
+xlabel('symbols, t/Tc')
 legend('I','Iup','Location','southoutside')
 
 %plot Q and upsampled Q
@@ -192,7 +250,7 @@ hold on
 plot(t.*Fc, Qup)
 hold off
 title('Q and Qup')
-xlabel('t/Tc (sec)')
+xlabel('symbol, t/Tc')
 legend('Q','Qup','Location','southoutside')
 
 %plot Iup + Qup
@@ -200,6 +258,17 @@ figure('Name', 'Real RF Wave')
 plot(t, S)
 title('Real RF Wave')
 xlabel('t (sec)')
+
+
+
+%% Standard precorder function
+function alpha = standard_precorder(bitstream)
+    number_of_bits = length(bitstream);
+    alpha = zeros(1,number_of_bits);
+    for k = 3:number_of_bits
+        alpha(k) = ((-1)^(k+1))*(2*bitstream(k-1) - 1)*(bitstream(k) - bitstream(k-2));
+    end
+end
 
 %% Window Function
 function window = w(t)
@@ -323,6 +392,34 @@ end
 function signal = s(t, alpha)
     global E; global T;
     signal = sqrt(E/T) * exp(1i*phi(t, alpha));
+end
+
+%% SOQPSK-TG signal baseband representation with OQPSK-style modulation
+function [xValues, signal] = real_signal(alpha)
+    xValues = 0:0.1:length(alpha);
+    nonmod = zeros(length(xValues),1);
+    for i = 1:length(xValues)
+        nonmod(i) = s(xValues(i),alpha);
+    end
+    size = length(nonmod);
+    spacing = xValues(2) - xValues(1);
+    % div by spacing to make indexes line up with values
+    yw_offset = uint32((14.9-7.8)/2)/spacing;  %- with this spacing
+    signal = zeros(1,(size - yw_offset));
+    for i = 1:length(nonmod) + yw_offset
+        if not(or(i > size, i - yw_offset < 1))
+            signal(i) = real(nonmod(i)) + imag(nonmod(i - yw_offset));
+        end
+    end
+    xValues = xValues(yw_offset+1:length(signal));
+    signal = signal(yw_offset+1:length(signal));
+end
+
+%% End-to-end function for modulation of the bitstream in SOQPSK-TG
+% bitstream is vector with values in [0 1]
+function [xValues, signal] = SOQPSKTGMod(bitstream)
+    alpha = standard_precorder(bitstream);
+    [xValues, signal] = real_signal(alpha);
 end
 
 %% Helps when plotting functions
