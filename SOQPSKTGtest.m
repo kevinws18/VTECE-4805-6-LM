@@ -219,7 +219,7 @@ plot(fftshift(db(BB)))
 %% graph real RF
 
 sps = 20;  % samples per symbol
-xw = 0:1/sps:length(alpha)*1.1;  % symbols
+xw = linspace(0, length(alpha)-1, length(alpha)*sps);  % samples
 yw = zeros(length(xw),1);  % complex baseband signal
 for i = 1:length(xw)
     yw(i) = s(xw(i),alpha);
@@ -227,30 +227,40 @@ end
 I = real(yw);
 Q = imag(yw);
 
-Fc = 2.4;  % carrier signal frequency
-t = (0:1/sps:length(alpha)*1.1)'./Fc;
-Iup = I.*cos(Fc*2*pi*t);  % multiply I by carrier signal
-Qup = -Q.*sin(Fc*2*pi*t);  % multiply Q by carrier offset 90deg
+fs = 48e6;
+fc = 2.4e6;  % carrier signal frequency
+t = (0:1/fs:(length(yw)-1)/fs)';
+Iup = I.*cos(fc*2*pi*t);  % multiply I by carrier signal
+Qup = -Q.*sin(fc*2*pi*t);  % multiply Q by carrier offset 90deg
 S = Iup + Qup;  % real RF signal
+IQup = yw.*exp(1i*2*pi*fc*t);
+S1 = real(IQup);
+
+% plot frequency spectrum
+%fftS = fftshift(fft(IQup));
+%f = fs/2*linspace(-1,1,length(t));
+figure()
+%plot(f, abs(fftS))
+freqz(IQup, 1, 2^18, 'whole', fs)
 
 % plot I and upsampled I
 figure('Name', 'I and Iup')
 plot(xw, I)
 hold on
-plot(t.*Fc, Iup)
+plot(xw, Iup)
 hold off
 title('I and Iup')
-xlabel('symbols, t/Tc')
+xlabel('symbols, t/Ts')
 legend('I','Iup','Location','southoutside')
 
 %plot Q and upsampled Q
 figure('Name', 'Q and Qup')
 plot(xw, Q)
 hold on
-plot(t.*Fc, Qup)
+plot(xw, Qup)
 hold off
 title('Q and Qup')
-xlabel('symbol, t/Tc')
+xlabel('symbol, t/Ts')
 legend('Q','Qup','Location','southoutside')
 
 %plot Iup + Qup
