@@ -158,14 +158,14 @@ legend('Real Part of Output Wave', 'Ternary Data', 'Binary Data', 'Location', 's
 
 % Implement true OQPSK functionality by splittng output wave
 % into real and imaginary (I and Q) components, time shifting
-% the Q wave by half the period, and summing the reuslt.
+% the Q wave by half the symbol length, and summing the reuslt.
 figure('Name','Wave Representations','Position', [100 100 1000 500]);
 plot(xw,real(yw) + 5)
 hold on
 plot(xw + T/2,imag(yw) + 2.5)
 size = length(yw);
 spacing = xw(2) - xw(1);
-yw_offset = (T/2)/spacing;
+yw_offset = uint32((14.9-7.8)/2)/spacing;
 wave = zeros(1,length(yw) - yw_offset);
 for i = 1:length(yw) + yw_offset
     if not(or(i > size, i - yw_offset < 1))
@@ -182,46 +182,30 @@ ylim([-1.25,6.25])
 yticks([-1 -0.5 0 0.5 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6]);
 yticklabels({'-1','0.5','0','0.5','1','-1','0.5','0','0.5','1','-1','0.5','0','0.5','1'})
 
-% Non-functional implementation of the Eye Diagram
-%          00           01           10            11
-eye = {zeros(1,50), zeros(1,50), zeros(1,50), zeros(1,50)};
-eye{2}(2) = 1; eye{3}(1) = 1; eye{4}(1) = 1; eye{4}(2) = 1;
-figure('Name','Eye Diagram','Position', [100 100 1000 500]);
-hold on
-for i=1:4
-   [xValues, signal] = SOQPSKTGMod(eye{i});
-   plot(xValues, signal);
-end
+[xValues, signal] = SOQPSKTGMod(u);
+eyediagram(signal,40)
+eye_diagram(signal, 10, 40, 'Real')
 
 
-%figure('Name','One Function','Position', [100 100 1000 500]);
-%[xValues, signal] = SOQPSKTGMod(u);
-%plot(xValues, signal);
+data = randi([0 3],1000,1);
+modSig = pskmod(data,4,pi/4);
 
-% Additional functions provided by Dr.Beex, uncomment to check them out
+sps=4;
+txfilter = comm.RaisedCosineTransmitFilter('OutputSamplesPerSymbol',sps);
 
-%{
-figure('Name','Wave Representations','Position', [100 100 1000 500]);
-plot(xw, abs(real(yw) + 1i*imag(yw)));
-
-figure('Name','Wave Representations','Position', [100 100 1000 500]);
-plot(real(yw), imag(yw));
-
-freqz(abs(real(yw) + 1i*imag(yw)),1,2.^18,'whole',1)
-
-[BB, ff] = freqz(yw,1,2.^18,'whole',1);
-plot(fftshift(db(BB)))
-
-[BB, ff] = freqz(kaiser(length(yw), 10).*yw,1,2.^18,'whole',1);
-plot(fftshift(db(BB)))
-%}
+txSig = txfilter(modSig);
+eyediagram(txSig,2*sps)
 
 %Standard precorder function
 function alpha = standard_precorder(bitstream)
     number_of_bits = length(bitstream);
-    alpha = zeros(1,number_of_bits);
+    tempalpha = zeros(1,number_of_bits);
     for k = 3:number_of_bits
-        alpha(k) = ((-1)^(k+1))*(2*bitstream(k-1) - 1)*(bitstream(k) - bitstream(k-2));
+        tempalpha(k) = ((-1)^(k+1))*(2*bitstream(k-1) - 1)*(bitstream(k) - bitstream(k-2));
+    end
+    alpha = zeros(1,2*number_of_bits);
+    for k = 1:number_of_bits
+        alpha((2*k)-1) = tempalpha(k);
     end
 end
 
@@ -351,7 +335,7 @@ end
 
 % SOQPSK-TG signal baseband representation with OQPSK-style modulation
 function [xValues, signal] = real_signal(alpha)
-    xValues = 0:0.1:length(alpha);
+    xValues = 1:0.1:length(alpha);
     nonmod = zeros(length(xValues),1);
     for i = 1:length(xValues)
         nonmod(i) = s(xValues(i),alpha);
@@ -359,11 +343,11 @@ function [xValues, signal] = real_signal(alpha)
     size = length(nonmod);
     spacing = xValues(2) - xValues(1);
     % div by spacing to make indexes line up with values
-    yw_offset = uint32((14.9-7.8)/2)/spacing;  %- with this spacing
+    yw_offset = uint32(14.9-7.8)/spacing;  %- with this spacing
     signal = zeros(1,(size - yw_offset));
     for i = 1:length(nonmod) + yw_offset
         if not(or(i > size, i - yw_offset < 1))
-            signal(i) = real(nonmod(i)) + imag(nonmod(i - yw_offset));
+            signal(i) = real(nonmod(i)) + 1i*imag(nonmod(i - yw_offset));
         end
     end
     xValues = xValues(yw_offset+1:length(signal));
@@ -375,6 +359,51 @@ end
 function [xValues, signal] = SOQPSKTGMod(bitstream)
     alpha = standard_precorder(bitstream);
     [xValues, signal] = real_signal(alpha);
+end
+
+% End-to-end function for modulation of the bitstream in SOQPSK-TG
+% bitstream is vector with values in [0 1]
+function [xValues, signal] = SOQPSKTGNonMod(bitstream)
+    alpha = standard_precorder(bitstream);
+    xValues = 0:0.1:length(alpha);
+    signal = zeros(length(xValues),1);
+    for i = 1:length(xValues)
+        signal(i) = s(xValues(i),alpha);
+    end
+end
+
+% Eye diagram plotter, use as an alternative to eyediagram()
+function eye_diagram(signal, bits_per_symbol, n, name)
+    figure('Name', append(name,' Eye Diagram'), 'Position', [100 100 500 500]);
+    %title('Imag Eye Diagram');
+    subplot(2,1,1);
+    title('Eye Diagram for In-Phase Signal (I)');
+    hold on;
+    s = real(signal);
+    spacing = 2*bits_per_symbol;
+    for i=1:(length(s)/spacing)-n
+        offset = i*spacing - spacing  + 1; 
+        plot(0:n, s(offset:offset+n)); 
+    end
+    hold off;
+    xlabel('Time');
+    ylabel('Amplitude');
+    xticks([0, floor(n/2), n]);
+    xticklabels({'-0.5','0','0.5'})
+    subplot(2,1,2);
+    hold on;
+    s = imag(signal);
+    spacing = 2*bits_per_symbol;
+    for i=1:(length(s)/spacing)-n
+        offset = i*spacing - spacing  + 1; 
+        plot(0:n, s(offset:offset+n)); 
+    end
+    title('Eye Diagram for Quadrature Signal (Q)');
+    hold off;
+    xlabel('Time');
+    ylabel('Amplitude');
+    xticks([0, floor(n/2), n]);
+    xticklabels({'-0.5','0','0.5'})
 end
 
 % Helps when plotting functions
