@@ -97,7 +97,7 @@ saveInt(4*intaccuracy + 1) = 0.25;
 %     - partial-resposne frequency pulse
 %       - window function
 
-% Graph the Frequency and Phase Pulses
+%% Graph the Frequency and Phase Pulses
 % Refer to figure 2.1 in [1] 
 figure('Name','Frequency and Phase Pulse', 'Position', [100 100 1000 500]);
 plotter(fTGs, 0, 8, 0.1);
@@ -116,7 +116,7 @@ legend('fTG(t), frequency pulse', 'qTG(t), phase pulse', ...
        'Location','northwest');
 title('Frequency pulse and phase pulse for SOQPSK-TG');
 
-% Graph the Phase Function
+%% Graph the Phase Function
 figure('Name','Phase Function', 'Position', [100 100 1000 500]);
 xw = 0:0.1:length(alpha);
 yw = zeros(length(xw),1);
@@ -133,7 +133,7 @@ grid on
 title('Phase function');
 legend('phi(t;alpha)','Location','northwest');
 
-% Graph the Binary, Ternary, and SOQPSK-TG representaions 
+%% Graph the Binary, Ternary, and SOQPSK-TG representaions 
 % of the original bitstream
 figure('Name','Wave Representations','Position', [100 100 1000 500]);
 xw = 0:0.1:length(alpha)*1.1;
@@ -156,7 +156,7 @@ yticks([-1 -0.5 0 0.5 1 1.5 2.5 3.5 4 5]);
 yticklabels({'-1','0.5','0','0.5','1','-1','0','1','0','1'})
 legend('Real Part of Output Wave', 'Ternary Data', 'Binary Data', 'Location', 'southoutside');
 
-% Implement true OQPSK functionality by splittng output wave
+%% Implement true OQPSK functionality by splittng output wave
 % into real and imaginary (I and Q) components, time shifting
 % the Q wave by half the symbol length, and summing the reuslt.
 figure('Name','Wave Representations','Position', [100 100 1000 500]);
@@ -182,21 +182,65 @@ ylim([-1.25,6.25])
 yticks([-1 -0.5 0 0.5 1 1.5 2 2.5 3 3.5 4 4.5 5 5.5 6]);
 yticklabels({'-1','0.5','0','0.5','1','-1','0.5','0','0.5','1','-1','0.5','0','0.5','1'})
 
+%% Eye Diagram
 [xValues, signal] = SOQPSKTGMod(u);
 eyediagram(signal,40)
 eye_diagram(signal, 10, 40, 'Real')
 
+%% graph real RF
+sps = 20;  % samples per symbol
+xw = linspace(0, length(alpha)-1, length(alpha)*sps);  % samples
+yw = zeros(length(xw),1);  % complex baseband signal
+for i = 1:length(xw)
+    yw(i) = s(xw(i),alpha);
+end
+I = real(yw);
+Q = imag(yw);
 
-data = randi([0 3],1000,1);
-modSig = pskmod(data,4,pi/4);
+fs = 48e6;
+fc = 2.4e6;  % carrier signal frequency
+t = (0:1/fs:(length(yw)-1)/fs)';
+Iup = I.*cos(fc*2*pi*t);  % multiply I by carrier signal
+Qup = -Q.*sin(fc*2*pi*t);  % multiply Q by carrier offset 90deg
+S = Iup + Qup;  % real RF signal
+IQup = yw.*exp(1i*2*pi*fc*t);
+S1 = real(IQup);
 
-sps=4;
-txfilter = comm.RaisedCosineTransmitFilter('OutputSamplesPerSymbol',sps);
+% plot frequency spectrum
+%fftS = fftshift(fft(IQup));
+%f = fs/2*linspace(-1,1,length(t));
+figure()
+%plot(f, abs(fftS))
+freqz(IQup, 1, 2^18, 'whole', fs)
 
-txSig = txfilter(modSig);
-eyediagram(txSig,2*sps)
+% plot I and upsampled I
+figure('Name', 'I and Iup')
+plot(xw, I)
+hold on
+plot(xw, Iup)
+hold off
+title('I and Iup')
+xlabel('symbols, t/Ts')
+legend('I','Iup','Location','southoutside')
 
-%Standard precorder function
+%plot Q and upsampled Q
+figure('Name', 'Q and Qup')
+plot(xw, Q)
+hold on
+plot(xw, Qup)
+hold off
+title('Q and Qup')
+xlabel('symbol, t/Ts')
+legend('Q','Qup','Location','southoutside')
+
+%plot Iup + Qup
+figure('Name', 'Real RF Wave')
+plot(t, S)
+title('Real RF Wave')
+xlabel('t (sec)')
+
+
+%% Standard precorder function
 function alpha = standard_precorder(bitstream)
     number_of_bits = length(bitstream);
     tempalpha = zeros(1,number_of_bits);
@@ -209,7 +253,7 @@ function alpha = standard_precorder(bitstream)
     end
 end
 
-% Window Function
+%% Window Function
 function window = w(t)
     global T1; global T2; global T;
     check = abs(t/(2*T));
@@ -222,7 +266,7 @@ function window = w(t)
     end
 end
 
-% Phase pulse function
+%% Phase pulse function
 function phase = q(t)
     global L; global T; %global fTGs;
     if t <= 0
@@ -246,7 +290,7 @@ function phase = q(t)
     %end
 end
 
-% Trapezoid rule integration
+%% Trapezoid rule integration
 % MATLAB's Integral function bugs when integrating fTG
 % Old integral function was giving issues at
 % x > 3 and x < -3 in non-shifted frequency graph,
@@ -264,7 +308,7 @@ function int = trapezoids(f,a,b,n)
     int = (h.*(fa + f(b))./2) + h.*int;
 end
 
-% Fast trapezoids
+%% Fast trapezoids
 % Trapezoid rule implemented above is incredibly slow and inefficient
 % This function takes advantage of precomputed values for fTGs
 % and uses the inbuilt trapz() function
@@ -277,7 +321,7 @@ function int = fasttrapezoids(b)
     int = trapz(xfTGs(1:offset), savedfTGs(1:offset), 1);
 end
 
-% Fast Integral
+%% Fast Integral
 % If fTGs values can be precomputed, why not precomute the integral?
 % 80000 points were taken over a range of 0-8, the only range that
 % matters thanks to the window function (fGTs is zero everywhere else)
@@ -290,7 +334,7 @@ function int = fastintegral(b)
     int = saveInt(offset);
 end
 
-% phi(t;alpha)
+%% phi(t;alpha)
 function phase = phi(t, alpha)
     % [1]'s implementation - k was never explained as a variable
     %{
@@ -327,13 +371,13 @@ function phase = phi(t, alpha)
     
 end
 
-% SOQPSK-TG signal baseband representation
+%% SOQPSK-TG signal baseband representation
 function signal = s(t, alpha)
     global E; global T;
     signal = sqrt(E/T) * exp(1i*phi(t, alpha));
 end
 
-% SOQPSK-TG signal baseband representation with OQPSK-style modulation
+%% SOQPSK-TG signal baseband representation with OQPSK-style modulation
 function [xValues, signal] = real_signal(alpha)
     xValues = 1:0.1:length(alpha);
     nonmod = zeros(length(xValues),1);
@@ -354,14 +398,14 @@ function [xValues, signal] = real_signal(alpha)
     signal = signal(yw_offset+1:length(signal));
 end
 
-% End-to-end function for modulation of the bitstream in SOQPSK-TG
+%% End-to-end function for modulation of the bitstream in SOQPSK-TG
 % bitstream is vector with values in [0 1]
 function [xValues, signal] = SOQPSKTGMod(bitstream)
     alpha = standard_precorder(bitstream);
     [xValues, signal] = real_signal(alpha);
 end
 
-% End-to-end function for modulation of the bitstream in SOQPSK-TG
+%% End-to-end function for modulation of the bitstream in SOQPSK-TG
 % bitstream is vector with values in [0 1]
 function [xValues, signal] = SOQPSKTGNonMod(bitstream)
     alpha = standard_precorder(bitstream);
@@ -372,18 +416,18 @@ function [xValues, signal] = SOQPSKTGNonMod(bitstream)
     end
 end
 
-% Eye diagram plotter, use as an alternative to eyediagram()
+%% Eye diagram plotter, use as an alternative to eyediagram()
 function eye_diagram(signal, bits_per_symbol, n, name)
     figure('Name', append(name,' Eye Diagram'), 'Position', [100 100 500 500]);
     %title('Imag Eye Diagram');
     subplot(2,1,1);
     title('Eye Diagram for In-Phase Signal (I)');
     hold on;
-    s = real(signal);
+    signal_graph = real(signal);
     spacing = 2*bits_per_symbol;
-    for i=1:(length(s)/spacing)-n
+    for i=1:(length(signal_graph)/spacing)-n
         offset = i*spacing - spacing  + 1; 
-        plot(0:n, s(offset:offset+n)); 
+        plot(0:n, signal_graph(offset:offset+n)); 
     end
     hold off;
     xlabel('Time');
@@ -392,11 +436,11 @@ function eye_diagram(signal, bits_per_symbol, n, name)
     xticklabels({'-0.5','0','0.5'})
     subplot(2,1,2);
     hold on;
-    s = imag(signal);
+    signal_graph = imag(signal);
     spacing = 2*bits_per_symbol;
-    for i=1:(length(s)/spacing)-n
+    for i=1:(length(signal_graph)/spacing)-n
         offset = i*spacing - spacing  + 1; 
-        plot(0:n, s(offset:offset+n)); 
+        plot(0:n, signal_graph(offset:offset+n)); 
     end
     title('Eye Diagram for Quadrature Signal (Q)');
     hold off;
@@ -406,7 +450,7 @@ function eye_diagram(signal, bits_per_symbol, n, name)
     xticklabels({'-0.5','0','0.5'})
 end
 
-% Helps when plotting functions
+%% Helps when plotting functions
 function plotter(func, lower, upper, step)
     xw = lower:step:upper;
     yw = zeros(length(xw),1);
