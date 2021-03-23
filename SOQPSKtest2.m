@@ -22,7 +22,7 @@ global E; global SPS;
 % Parameters specific to SOQPSK-TG
 p = 0.7; A = 1; B = 1.25; T1= 1.5;
 T2 = 0.5; L = 8; h = 0.5; T = 1;
-E = 1; SPS = 20;
+E = 1; SPS = 16;
 
 % Random bitstream generation
 number_of_bits = 100;
@@ -135,9 +135,8 @@ yticks([-1 -0.5 0 0.5 1 1.5 2.5 3.5 4 5]);
 yticklabels({'-1','0.5','0','0.5','1','-1','0','1','0','1'})
 legend('Real Part of Output Wave', 'Ternary Data', 'Binary Data', 'Location', 'southoutside');
 %}
-eyediagram(SOQPSK, 4*SPS);
-eye_diagram(SOQPSK, 2*SPS);
-
+eyediagram(SOQPSK, 2*SPS);
+eye_diagram(SOQPSK, SPS);
 
 %% Implement true OQPSK functionality by splittng output wave
 % into real and imaginary (I and Q) components, time shifting
@@ -300,15 +299,22 @@ function phase = phi(alpha)
     
     % Implementation from results by Dr. Beex
     global procfTGs; global SPS;
-    phase = cumsum(SPS*filter(procfTGs, 1, upsample(alpha, SPS/2)))/SPS;
-    
+    padded = zeros(1, length(alpha)*(SPS/4));
+    for index = 1:length(alpha)
+        padded((index-1)*SPS/4 + 1) = alpha(index);
+    end
+    result = filter(procfTGs, 1, padded);
+    phase = zeros(1, length(result)); phase(1) = result(1);
+    for index = 2:length(result)
+        phase(index) = phase(index-1) + result(index);
+    end
 end
 
 %% SOQPSK-TG signal baseband representation
 function signal = s(alpha)
-    %global E; global T;
+    global E; global T;
     %signal = sqrt(E/T) .* exp(1i*phi(alpha));
-    signal = exp(1i*pi/4)*exp(1i*pi*phi(alpha));
+    signal = sqrt(E/T).*exp(1i*pi*(0.25 + phi(alpha)));
 end
 
 %% SOQPSK-TG signal baseband representation with OQPSK-style modulation
