@@ -297,7 +297,7 @@ function phase = phi(alpha)
         phase = sum*2*pi*h;
     %}
     
-    % Implementation from results by Dr. Beex
+    % Implementation from guidance by Dr. Beex
     global procfTGs; global SPS;
     padded = zeros(1, length(alpha)*(SPS/4));
     for index = 1:length(alpha)
@@ -314,7 +314,7 @@ end
 function signal = s(alpha)
     global E; global T;
     %signal = sqrt(E/T) .* exp(1i*phi(alpha));
-    signal = sqrt(E/T).*exp(1i*pi*(0.25 + phi(alpha)));
+    signal = sqrt(E/T).*exp(1i*pi*(phi(alpha) + 0.25));
 end
 
 %% SOQPSK-TG signal baseband representation with OQPSK-style modulation
