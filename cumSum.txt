@@ -1,0 +1,30 @@
+module cumSum(clk, reset_n, results, phase);
+	input clk, reset_n;
+	input [31:0] results [resLength:0];
+	output [31:0] phase [resLength:0];
+	reg [31:0] phase [resLength:0];
+	reg [resLength:0] counter;
+
+	parameter resLength = 10'd2400;
+	
+	always @(posedge clk or negedge reset_n) begin
+		if(reset_n == 1'b0) begin
+			phase[resLength:0] <= 31'b0;
+			counter <= resLength'b0;
+		end
+		else begin
+			if(counter < resLength) begin
+				if(counter == 0) begin
+					phase[counter] <= results[counter];
+				end
+				else begin
+					phase[counter] <= phase[counter - 1] + results[counter];
+				end
+				counter <= counter + 1;
+			end
+			else begin
+				counter <= 0;
+			end
+		end
+	end
+endmodule

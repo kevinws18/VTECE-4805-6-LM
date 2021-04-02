@@ -1,0 +1,34 @@
+module signalPrecoder();
+	input clk;
+	input reset_n;
+	input [7:0] binaryVals;
+	output [1:0] ternaryVals [7:0];
+	reg [1:0] ternaryVals [7:0];
+	reg [1:0] interVals [7:0];
+	reg nPlus2, nPlus1;
+	reg [4:0] count;
+
+	always @(posedge clk or negedge reset_n) begin
+		if(reset_n == 1'b0) begin
+			count <= 5'd2;
+			ternaryVals[7:0] <= 2'b0;
+		end
+		else begin
+			if(count < 8) begin
+				if(count[0] == 1'b1) begin
+					interVals[count] <= (2 * binaryVals[count - 1] - 1) * (binaryVals[count] - binaryVals[count - 2]);
+				end
+				else begin
+					interVals[count] <= 2'b10 * (2 * binaryVals[count - 1] - 1) * (binaryVals[count] - binaryVals[count - 2]);	
+				end
+				count <= count + 5'd1;
+			end
+			else begin
+				ternaryVals <= interVals;
+				interVals[7:0] <= 2'b0;
+				count <= 5'd2;
+			end
+		end
+	end
+	
+endmodule
