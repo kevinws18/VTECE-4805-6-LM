@@ -1,11 +1,11 @@
 clc; clear; close all;
-
+% WHY SEND 2 PACKETS????????????? CORRECT THE CALCULATED CFO 
 % Parameters specific to SOQPSK-TG
 global T; global E; global SPS;
 T = 1; E = 1; SPS = 20;
 
 global CFO; global phaseOffset;
-CFO = 0.020; phaseOffset = 0.005;   % Change values to simulate CFO and Phase offset
+CFO = 0.020; phaseOffset = 0.035;   % Change values to simulate CFO and Phase offset
 
 % Length of transmitted message
 messageLength = 100;
@@ -40,15 +40,10 @@ correction_packet = correction_packet .* exp(1i*2*pi*(CFO.*correctnn - phaseOffs
 % Calculate CFO
 signal_unwrap = unwrap(angle(correction_packet));
 calcCenterFrequencyOffset = ((signal_unwrap(end) - signal_unwrap(1))/(correction_bits))/62.7690;
-
-
-% Send correction packet 2
-correction_packet_2 = SOQPSK_TG_modulation(zeros(1,correction_bits));
-correction_packet_2 = correction_packet_2 .* exp(1i*2*pi*(CFO.*correctnn - phaseOffset));
-% Correct CFO in correction packet 2
-correction_packet_2 = correction_packet_2 .* exp(1i*2*pi*(-calcCenterFrequencyOffset.*correctnn));
+% Correct CFO in correction packet
+correction_packet = correction_packet .* exp(1i*2*pi*(-calcCenterFrequencyOffset.*correctnn));
 % Calculate Phase offset
-signal_unwrap_2 = unwrap(angle(correction_packet_2));
+signal_unwrap_2 = unwrap(angle(correction_packet));
 calcPhaseOffset = ((signal_unwrap_2(1) - 0.791681)/-6.2832) - 0.00099;
 
 % Corrected Signal
