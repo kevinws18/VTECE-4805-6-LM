@@ -38,3 +38,4 @@ def SOQPSK_TG_Demod(preamble, signal, SPS):
             bits[x] = 0
 
     bits = bits[0:-4]
+    return bits
