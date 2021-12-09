@@ -2,8 +2,8 @@ from typing import List
 
 import numpy as np
 import math
-from MacPacket import MacPacket
-from MacPacket import PACKET_TYPE_MAP
+from Packets_Py.MacPacket import MacPacket
+from Packets_Py.MacPacket import PACKET_TYPE_MAP
 
 class DataPacketConstructor:
     def __init__(self, filename:str, data_mtu: int = 1024):
@@ -33,5 +33,6 @@ class DataPacketConstructor:
             # TODO: perform FEC encoding on bytearr
             
             txbytes += bytearr
+            #txbytes += b'\x00' #Pad with zeros that might get discarded during mod
 
         return txbytes
