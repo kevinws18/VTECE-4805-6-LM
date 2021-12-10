@@ -25,8 +25,19 @@ class DataPacketConstructor:
 
         self.__packets = packets
         return packets
-
+    
     def make_bytearr(self) -> bytearray:
+        txbytes = bytearray()
+        for packet in self.__packets:
+            bytearr = packet.get_bytes()
+
+            # TODO: perform FEC encoding on bytearr
+
+            txbytes += bytearr
+
+        return txbytes
+
+    def make_bytearr_fec(self) -> bytearray:
         txbytes = bytearray()
 
         # This section defines the values to initialize the RS control
@@ -74,7 +85,7 @@ class DataPacketConstructor:
 
             # this checks if there's a partial chunk to be encoded
             if len(bytearr) != msg_len*num_chunks:
-                to_pad = bytearr[(i+1)*msg_len:]
+                to_pad = bytearray(bytearr[(i+1)*msg_len:])
                 pad = bytearray(msg_len - len(to_pad))
                 to_pad.extend(pad)
                 # encode the padded chunk

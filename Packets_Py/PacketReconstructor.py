@@ -2,9 +2,9 @@ from typing import List
 
 import math
 import pyreedsolomon
-from MacPacket import HEADER_BYTE_COUNT, MacPacket
-from MacPacket import PACKET_TYPE_MAP
-from MacPacket import SIZE_OFFSET
+from Packets_Py.MacPacket import HEADER_BYTE_COUNT, MacPacket
+from Packets_Py.MacPacket import PACKET_TYPE_MAP
+from Packets_Py.MacPacket import SIZE_OFFSET
 
 #Simple packet reconstructor
 # TODO: must pull and verify in real time from a queue
