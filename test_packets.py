@@ -1,3 +1,6 @@
+# AUTHOR: STEPHAN MULLER
+# OWNER: VIRGINIA TECH/LOCKHEED MARTIN
+
 # Plaground to use packets
 
 import numpy as np

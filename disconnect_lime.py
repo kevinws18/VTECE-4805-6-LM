@@ -1,3 +1,6 @@
+# AUTHOR: STEPHAN MULLER
+# OWNER: VIRGINIA TECH/LOCKHEED MARTIN
+
 import SoapySDR
 
 args = dict(driver="lime")

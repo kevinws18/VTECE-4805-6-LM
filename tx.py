@@ -1,3 +1,6 @@
+# AUTHOR: STEPHAN MULLER
+# OWNER: VIRGINIA TECH/LOCKHEED MARTIN
+
 # Class for transmitting a set of files
 
 import time
