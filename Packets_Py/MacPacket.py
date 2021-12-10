@@ -3,16 +3,19 @@
 # This object represents a single packet in the MAC layer.
 # A header, data payload, and a trailer is included
 import zlib
-from BitMasks import *
+from Packets_Py.BitMasks import *
 import numpy as np
 
 HEADER_BYTE_COUNT = 7
+TRAILER_BYTE_COUNT = 4
 FRAME_CONTROL_OFFSET = 0
 SRC_ADDR_OFFSET = 1
 DST_ADDR_OFFSET = 2
 SEQ_NUM_OFFSET = 3
 SIZE_OFFSET = 5
 PACKET_TYPE_MAP = {'DATA': 0, 'ACK': 1, 'RTS': 2, 'CTS': 3}
+
+PREAMBLE = 0b00110100.to_bytes(1, 'big')
 
 
 class MacHeader:
@@ -113,5 +116,5 @@ class MacPacket:
 
     def get_bytes(self) -> bytearray:
         crc_bytes = self.__crc.to_bytes(4, 'big')
-        return self.__header.get_bytes() + bytearray(self.__data) + bytearray(crc_bytes)
+        return PREAMBLE + self.__header.get_bytes() + bytearray(self.__data) + bytearray(crc_bytes)
 

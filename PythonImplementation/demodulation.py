@@ -1,5 +1,22 @@
 import numpy as np
 
+def SOQPSK_TG_Demodulation(preamble, signal):
+    SPS=20
+    samples_per_bit = SPS/2
+
+    phase = (np.unwrap(np.angle(signal)) - 0.785416) / np.pi
+    filtered = [0] + [phase[i+1] - phase[i] for i in range(1, len(phase)-1)] + [0]
+
+    filter_offset = 0.015
+    padded = [1 if filtered[i] > filter_offset else -1 if filtered[i] < -filter_offset else 0 for i in range(len(phase))]
+    alpha = [padded[int(i * samples_per_bit)-1] for i in range(int(len(padded) / samples_per_bit))]
+
+    bits = preamble[-2:]
+    for i in range(2, len(alpha)):
+        bits.append(int(((1 if (i%2 == 0) else -1) * (2*bits[i-1] - 1) * (1 - bits[i-2])) == alpha[i]))
+
+    bits = bits[4:] + [0, 0, 0, 0]
+    return bits
 
 
 def SOQPSK_TG_Demod(preamble, signal, SPS):
